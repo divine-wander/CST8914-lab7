@@ -1,136 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Form validation with messages on top: Code example - Accessibility Developer Guide example</title>
-        <meta charset="utf-8">
-        <style>.control, fieldset {
+<head>
+  <title>Form validation with messages on top: Code example - Accessibility Developer Guide example</title>
+  <meta charset="utf-8">
+  <style>
+    .control,
+    fieldset {
       margin: 6px 0;
     }
-    
+
     label {
       display: inline-block;
       width: 120px;
       vertical-align: top;
     }
-    
-    input + label {
+
+    input+label {
       width: auto;
     }
-    
-    .error, .required {
+
+    .error,
+    .required {
       color: red;
     }
-    
+
     fieldset ul {
       margin: 0;
-    }</style>
-    </head>
-    <body>
-        <h1>Feedback form</h1>
-    <form>
-        <div class="control">
-          <label>Full name <span class="required">*</span></label><input id="name" name="name" type="text" />
-        </div>
-        <div class="control">
-          <label>Biography</label><textarea id="biography" name="biography" type="text"></textarea>
-          <span>Include examples on your skills in JavaScript.</span>
-        </div>
-        
-          <div>Gender</div>
-          <div class="control">
-            <input id="gender_male" name="gender" type="radio" value="male" /><label>Male</label>
-          </div>
-          <div class="control">
-            <input id="gender_female" name="gender" type="radio" value="female" /><label>Female</label>
-          </div>
-        
-        <div class="control">
-          <input id="accept_agbs" name="accept_agbs" type="checkbox" value="1" /><label>I accept the terms and conditions</label>
-        </div>
-        <div class="control">
-          <input name="validate" type="hidden" value="1" /><input type="submit" value="Register" />
-        </div>
-      </form>
-      
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-          <script>"use strict";
-      
-      ;
-      (function () {
-        var validateInput;
-      
-        $.urlParam = function (name) {
-          var results;
-          results = new RegExp('[?&]' + name + '=([^&#]*)').exec(window.location.href);
-      
-          if (results === null) {
-            return null;
-          } else {
-            return decodeURI(results[1]) || null;
+    }
+
+    /* Q3: Show keyboard users when the error summary has focus */
+    .errors:focus {
+      outline: 2px solid #000;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Feedback form</h1>
+
+  <!-- Q2: Let users know which fields are required -->
+  <form id="feedback-form" novalidate>
+    <p>Fields marked with * are required.</p>
+
+    <!-- Q2: Connect the name label to its input -->
+    <div class="control">
+      <label for="name">
+        Full name <span class="required">*</span>
+      </label>
+      <input id="name" name="name" type="text" required aria-describedby="name-help" />
+      <span id="name-help">Required field.</span>
+    </div>
+
+    <!-- Q2: Make the biography instructions available to screen readers -->
+    <div class="control">
+      <label for="biography">
+        Biography <span class="required">*</span>
+      </label>
+      <textarea id="biography" name="biography" required aria-describedby="biography-help"></textarea>
+      <span id="biography-help">
+        Include examples on your skills in JavaScript.
+      </span>
+    </div>
+
+    <!-- Q2: Keep the gender choices in one group -->
+    <fieldset id="gender-group">
+      <legend>
+        Gender <span class="required">*</span>
+      </legend>
+
+      <div class="control">
+        <input id="gender_male" name="gender" type="radio" value="male" required />
+        <label for="gender_male">Male</label>
+      </div>
+
+      <div class="control">
+        <input id="gender_female" name="gender" type="radio" value="female" required />
+        <label for="gender_female">Female</label>
+      </div>
+    </fieldset>
+
+    <!-- Q2: Make the checkbox label clickable and accessible -->
+    <div class="control">
+      <input id="accept_agbs" name="accept_agbs" type="checkbox" value="1" required />
+      <label for="accept_agbs">
+        I accept the terms and conditions
+        <span class="required">*</span>
+      </label>
+    </div>
+
+    <div class="control">
+      <input name="validate" type="hidden" value="1" />
+      <input type="submit" value="Register" />
+    </div>
+  </form>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"
+    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+
+  <script>
+    "use strict";
+
+    (function () {
+      // Q3: Check each field and report any missing information
+      function validateInput(input, message) {
+        var $input = $('[name="' + input + '"]');
+        var $referencedElement;
+        var $elementToDescribe;
+        var $errorContainer;
+        var $error;
+        var isValid;
+
+        if ($input.is(':checkbox')) {
+          isValid = $input.is(':checked');
+        } else if ($input.is(':radio')) {
+          isValid = $input.is(':checked');
+        } else {
+          isValid = $.trim($input.val()).length > 0;
+        }
+        if (!isValid) {
+
+          // Q3: Place errors together at the top of the form
+          if ($('fieldset.errors').length === 0) {
+            $('form').prepend(
+              '<fieldset class="errors" tabindex="-1">' +
+              '<legend>Errors</legend>' +
+              '<ul></ul>' +
+              '</fieldset>'
+            );
           }
-        };
-      
-        validateInput = function validateInput(input, message) {
-          var $elementToDescribe, $error, $errorContainer, $fieldset, $input, $referencedElement, value;
-          $input = $('[name="' + input + '"]');
-      
-          if ((value = $.urlParam(input)) === null) {
-            if ($('fieldset.errors').length === 0) {
-              $('form').prepend('<fieldset class="errors"><legend>Errors</legend><ul></ul></fieldset>');
-            }
-      
-            $referencedElement = null;
-            $elementToDescribe = null;
-            $errorContainer = $('fieldset.errors ul');
-      
-            if ($input.is(':radio')) {
-              $fieldset = $input.closest('fieldset');
-              $elementToDescribe = $fieldset;
-              $referencedElement = $input.filter(':first');
-            } else {
-              $elementToDescribe = $input;
-              $referencedElement = $input;
-            }
-      // R.G. hint: fix next line ;)
-            $error = $('<a>' + message + '</a>');
-            $error.click(function (e) {
-              // If we rely on the link's href pointing to the input's ID, it doesn't trigger forms mode in screen readers
-              $referencedElement.focus();
-              return e.preventDefault();
-            });
-            $elementToDescribe.attr('aria-describedby', input + '_description');
-            $errorContainer.append('<li>').find('li:last').append($error);
-      
-            if ($(':not(form):focus').length === 0) {
-              // See https://stackoverflow.com/questions/46134247/jquery-setting-focus-doesnt-work-in-ie11/
-            
-            }
+          $errorContainer = $('fieldset.errors ul');
+
+          if ($input.is(':radio')) {
+            $elementToDescribe = $input.closest('fieldset');
+            $referencedElement = $input.filter(':first');
           } else {
-            if ($input.is(':checkbox')) {
-              $input.attr('checked', true);
-            }
-      
-            if ($input.is(':radio')) {
-              return $input.filter('[value="' + value + '"]').attr('checked', true);
-            } else {
-              return $input.val(value);
-            }
+            $elementToDescribe = $input;
+            $referencedElement = $input;
           }
-        };
-      
-        $(document).ready(function () {
-          if ($.urlParam('validate')) {
-            validateInput('name', 'Please enter your name!');
-            validateInput('biography', 'Please tell us something about your history!');
-            validateInput('gender', 'Please tell us your gender!');
-            validateInput('accept_agbs', 'You must accept our terms and conditions!');
-      
-            if ($('.error').length === 0) {
-              return alert('All inputs are valid.');
+
+          // R.G. hint: fix next line ;)
+          // Q3: Link the error to the field that needs attention
+          $error = $('<a href="#' +
+            $referencedElement.attr('id') +
+            '" class="error">' + message + '</a>');
+
+          // Q3: Let users jump directly to the field
+          $error.click(function (e) {
+            $referencedElement.focus();
+            e.preventDefault();
+          });
+
+          // Q3: Let screen readers announce the field's error
+          var errorId = input + '_error';
+          $error.attr('id', errorId);
+
+          var existingDescription =
+            $elementToDescribe.attr('aria-describedby') || '';
+
+          $elementToDescribe.attr(
+            'aria-describedby',
+            (existingDescription + ' ' + errorId).trim()
+          );
+
+          $errorContainer
+            .append('<li></li>')
+            .find('li:last')
+            .append($error);
+        }
+
+        return isValid;
+      }
+
+      $(document).ready(function () {
+
+        // Q3: Check the form when Register is selected
+        $('#feedback-form').on('submit', function (e) {
+          e.preventDefault();
+
+          // Q3: Clear old errors before checking again
+          $('fieldset.errors').remove();
+
+          $('[aria-describedby]').each(function () {
+            var descriptions =
+              ($(this).attr('aria-describedby') || '')
+                .split(/\s+/)
+                .filter(function (id) {
+                  return id && !id.endsWith('_error');
+                });
+
+            if (descriptions.length) {
+              $(this).attr(
+                'aria-describedby',
+                descriptions.join(' ')
+              );
+            } else {
+              $(this).removeAttr('aria-describedby');
             }
+          });
+
+          var nameValid = validateInput(
+            'name',
+            'Please enter your name!'
+          );
+          var biographyValid = validateInput(
+            'biography',
+            'Please tell us something about your history!'
+          );
+          var genderValid = validateInput(
+            'gender',
+            'Please tell us your gender!'
+          );
+          var termsValid = validateInput(
+            'accept_agbs',
+            'You must accept our terms and conditions!'
+          );
+          // Q3: Show success only when all fields are complete
+          if (nameValid && biographyValid &&
+            genderValid && termsValid) {
+            alert('All inputs are valid.');
+          } else {
+
+            // Q3: Move focus to the errors so they are announced
+            $('fieldset.errors').focus();
           }
         });
-      }).call(void 0);</script>
-                
-        </body>
-      </html>
+      });
+
+    })();
+  </script>
+</body>
+</html>
